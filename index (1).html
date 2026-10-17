@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Комунальні платежі</title>
+<meta name="theme-color" content="#ffffff">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;min-height:100vh}
+.app{max-width:480px;margin:0 auto;padding:12px;padding-bottom:32px}
+.nav{display:flex;gap:3px;margin-bottom:16px;background:#ebebeb;border-radius:12px;padding:4px}
+.nav button{flex:1;padding:8px 2px;border:none;background:transparent;border-radius:8px;font-size:11.5px;color:#666;cursor:pointer}
+.nav button.active{background:#fff;color:#1a1a1a;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.screen{display:none}.screen.active{display:block}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:500;color:#666;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.icon{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.icon-elec{background:#EAF3DE;color:#3B6D11}.icon-gas{background:#FAEEDA;color:#854F0B}
+.icon-water{background:#E6F1FB;color:#185FA5}.icon-export{background:#E1F5EE;color:#0F6E56}
+.icon-bell{background:#EEEDFE;color:#534AB7}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.field-label{font-size:11px;color:#888;margin-bottom:3px}
+input[type=number]{width:100%;padding:8px;border:0.5px solid #ccc;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a}
+input[type=number]:focus{outline:none;border-color:#888}
+.calc-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid #f0f0f0;font-size:13px}
+.calc-row:last-child{border-bottom:none;font-weight:500;padding-top:10px}
+.calc-label{color:#888}
+.total-big{font-size:28px;font-weight:500;text-align:center;padding:8px 0}
+.total-label{font-size:12px;color:#888;text-align:center;margin-bottom:8px}
+.btn-primary{width:100%;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:500;cursor:pointer;margin-top:8px}
+.btn-secondary{width:100%;padding:10px;background:transparent;color:#1a1a1a;border:0.5px solid #ccc;border-radius:12px;font-size:14px;cursor:pointer;margin-top:6px}
+.month-select{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.month-select select{flex:1;padding:8px;border:0.5px solid #ccc;border-radius:8px;font-size:14px;background:#fff}
+.month-select button{padding:8px 12px;border:0.5px solid #ccc;border-radius:8px;background:#fff;cursor:pointer;font-size:16px}
+.month-tag{font-size:12px;color:#888;text-align:center;margin-bottom:12px}
+.hist-item{padding:12px;background:#fff;border:0.5px solid rgba(0,0,0,.1);border-radius:12px;margin-bottom:8px}
+.hist-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.hist-month{font-size:14px;font-weight:500}
+.hist-total{font-size:16px;font-weight:500}
+.hist-sub{font-size:12px;color:#888}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px}
+.badge-paid{background:#EAF3DE;color:#3B6D11}.badge-unpaid{background:#FAECE7;color:#993C1D}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:#f5f5f5;border-radius:8px;padding:12px}
+.stat-val{font-size:20px;font-weight:500}
+.stat-lbl{font-size:11px;color:#888;margin-top:2px}
+.chart-wrap{position:relative;width:100%}
+.section-title{font-size:12px;font-weight:500;color:#888;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.empty{text-align:center;padding:32px 16px;color:#888;font-size:14px}
+.photo-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:#f5f5f5;border:0.5px dashed #bbb;border-radius:8px;font-size:13px;color:#888;cursor:pointer;margin-bottom:10px}
+input[type=file]{display:none}
+.ai-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center}
+.ai-modal{background:#fff;border-radius:12px;padding:24px;max-width:340px;width:90%;text-align:center}
+.ai-modal h3{font-size:16px;font-weight:500;margin-bottom:8px}
+.ai-modal p{font-size:13px;color:#888;margin-bottom:16px}
+.spinner{width:32px;height:32px;border:2px solid #eee;border-top-color:#1a1a1a;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-result{background:#f5f5f5;border-radius:8px;padding:12px;margin-bottom:16px;text-align:left}
+.ai-result-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0}
+.ai-result-row span:first-child{color:#888}
+.ai-error{color:#993C1D;font-size:13px;margin-bottom:12px}
+.modal-btns{display:flex;gap:8px}
+.modal-btns button{flex:1;padding:10px;border-radius:8px;font-size:14px;cursor:pointer}
+.btn-confirm{background:#1a1a1a;color:#fff;border:none;font-weight:500}
+.btn-cancel{background:transparent;border:0.5px solid #ccc}
+.photo-preview{width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:12px}
+.reminder-banner{display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:14px;margin-bottom:12px}
+.export-textarea{width:100%;min-height:240px;padding:10px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;font-family:'Courier New',monospace;background:#f9f9f9;resize:vertical;line-height:1.6}
+.export-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.export-btns button{padding:10px;border:0.5px solid #ccc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer}
+.scope-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.scope-btn{padding:5px 12px;border:0.5px solid #ccc;border-radius:20px;font-size:12px;background:transparent;color:#888;cursor:pointer}
+.scope-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.dl-chart-btn{display:block;width:100%;margin-top:10px;padding:7px;background:transparent;border:0.5px solid #ccc;border-radius:8px;font-size:12px;color:#666;cursor:pointer;text-align:center}
+.dl-chart-btn:active{background:#f0f0f0}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-on{background:#3B6D11}.dot-off{background:#993C1D}.dot-pending{background:#EF9F27}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="nav">
+  <button class="active" onclick="showScreen('enter',this)">Введення</button>
+  <button onclick="showScreen('history',this)">Історія</button>
+  <button onclick="showScreen('stats',this)">Статистика</button>
+  <button onclick="showScreen('export',this)">Експорт</button>
+  <button onclick="showScreen('settings',this)">Тарифи</button>
+</div>
+
+<!-- ENTER -->
+<div id="screen-enter" class="screen active">
+  <div id="reminderBanner"></div>
+  <div id="autofillHint" style="display:none;transition:opacity .6s;align-items:center;gap:8px;background:#E1F5EE;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#0F6E56">
+    <span style="font-size:16px">↩</span>
+    <span>Попередні показники підтягнуто з минулого місяця</span>
+  </div>
+  <div class="month-select">
+    <button onclick="changeMonth(-1)">&#8249;</button>
+    <select id="monthSel" onchange="loadMonthData()"></select>
+    <button onclick="changeMonth(1)">&#8250;</button>
+  </div>
+  <p class="month-tag" id="monthTag"></p>
+
+  <div class="card">
+    <div class="card-title"><span class="icon icon-elec">⚡</span> Електроенергія</div>
+    <label class="photo-btn" onclick="triggerPhoto('elec')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M16 6l-1.5-3h-5L8 6"/></svg>
+      Зчитати з фото лічильника
+    </label>
+    <div style="margin-bottom:10px">
+      <div class="field-label" style="margin-bottom:5px">Денний тариф</div>
+      <div class="field-row">
+        <div><div class="field-label">Поперед.</div><input type="number" id="e_day_prev" placeholder="0" oninput="calcAll()"></div>
+        <div><div class="field-label">Поточний</div><input type="number" id="e_day_curr" placeholder="0" oninput="calcAll()"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="field-label" style="margin-bottom:5px">Нічний тариф</div>
+      <div class="field-row">
+        <div><div class="field-label">Поперед.</div><input type="number" id="e_night_prev" placeholder="0" oninput="calcAll()"></div>
+        <div><div class="field-label">Поточний</div><input type="number" id="e_night_curr" placeholder="0" oninput="calcAll()"></div>
+      </div>
+    </div>
+    <div class="calc-row"><span class="calc-label">Денний (кВт·год)</span><span id="e_day_kwh">0</span></div>
+    <div class="calc-row"><span class="calc-label">Нічний (кВт·год)</span><span id="e_night_kwh">0</span></div>
+    <div class="calc-row"><span class="calc-label">Сума</span><span id="e_total">0 ₴</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gas">🔥</span> Газ</div>
+    <label class="photo-btn" onclick="triggerPhoto('gas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M16 6l-1.5-3h-5L8 6"/></svg>
+      Зчитати з фото лічильника
+    </label>
+    <div class="field-row">
+      <div><div class="field-label">Поперед.</div><input type="number" id="g_prev" placeholder="0" oninput="calcAll()"></div>
+      <div><div class="field-label">Поточний</div><input type="number" id="g_curr" placeholder="0" oninput="calcAll()"></div>
+    </div>
+    <div class="calc-row"><span class="calc-label">Витрата (м³)</span><span id="g_usage">0</span></div>
+    <div class="calc-row"><span class="calc-label">Спожито</span><span id="g_total">0 ₴</span></div>
+    <div class="calc-row"><span class="calc-label">Доставка</span><span id="g_delivery_val">0 ₴</span></div>
+    <div class="calc-row"><span class="calc-label">Сума</span><span id="g_grand">0 ₴</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon icon-water">💧</span> Вода (холодна)</div>
+    <label class="photo-btn" onclick="triggerPhoto('water')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="6" width="20" height="14" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M16 6l-1.5-3h-5L8 6"/></svg>
+      Зчитати з фото лічильника
+    </label>
+    <div class="field-row">
+      <div><div class="field-label">Поперед.</div><input type="number" id="wc_prev" placeholder="0" oninput="calcAll()"></div>
+      <div><div class="field-label">Поточний</div><input type="number" id="wc_curr" placeholder="0" oninput="calcAll()"></div>
+    </div>
+    <div class="calc-row"><span class="calc-label">Витрата (м³)</span><span id="wc_usage">0</span></div>
+    <div class="calc-row"><span class="calc-label">Спожито</span><span id="w_total">0 ₴</span></div>
+    <div class="calc-row"><span class="calc-label">Доставка</span><span id="wc_delivery_val">0 ₴</span></div>
+    <div class="calc-row"><span class="calc-label">Сума</span><span id="wc_grand">0 ₴</span></div>
+  </div>
+
+  <div class="card">
+    <div class="total-label">До сплати за місяць</div>
+    <div class="total-big" id="grand_total">0 ₴</div>
+    <div id="fixed-costs-detail" style="font-size:12px;color:#888;text-align:center;margin-bottom:8px"></div>
+    <button class="btn-primary" onclick="saveMonth()">Зберегти показники</button>
+    <button class="btn-secondary" onclick="markPaid()">Позначити як сплачено ✓</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="screen-history" class="screen"><div id="hist-list"></div></div>
+
+<!-- STATS -->
+<div id="screen-stats" class="screen">
+  <div class="stat-grid" id="stat-cards"></div>
+  <div class="card">
+    <div class="section-title">Витрати по місяцях (₴)</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chartTotal"></canvas></div>
+    <button class="dl-chart-btn" onclick="downloadChart('chartTotal','витрати')">⬇ Зберегти як картинку</button>
+  </div>
+  <div class="card">
+    <div class="section-title">Електроенергія (кВт·год)</div>
+    <div class="chart-wrap" style="height:170px"><canvas id="chartElec"></canvas></div>
+    <button class="dl-chart-btn" onclick="downloadChart('chartElec','електроенергія')">⬇ Зберегти як картинку</button>
+  </div>
+  <div class="card">
+    <div class="section-title">Газ (м³)</div>
+    <div class="chart-wrap" style="height:170px"><canvas id="chartGas"></canvas></div>
+    <button class="dl-chart-btn" onclick="downloadChart('chartGas','газ')">⬇ Зберегти як картинку</button>
+  </div>
+  <div class="card">
+    <div class="section-title">Вода холодна (м³)</div>
+    <div class="chart-wrap" style="height:170px"><canvas id="chartWater"></canvas></div>
+    <button class="dl-chart-btn" onclick="downloadChart('chartWater','вода')">⬇ Зберегти як картинку</button>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div id="screen-export" class="screen">
+  <div class="card">
+    <div class="card-title"><span class="icon icon-export">↗</span> Текстовий звіт</div>
+    <div class="scope-row">
+      <button class="scope-btn active" onclick="setScope('current',this)">Поточний місяць</button>
+      <button class="scope-btn" onclick="setScope('3',this)">3 місяці</button>
+      <button class="scope-btn" onclick="setScope('6',this)">6 місяців</button>
+      <button class="scope-btn" onclick="setScope('all',this)">Всі дані</button>
+    </div>
+    <textarea class="export-textarea" id="exportText" readonly></textarea>
+    <div class="export-btns">
+      <button onclick="copyExport()">📋 Копіювати</button>
+      <button onclick="downloadExport()">💾 Завантажити .txt</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="icon icon-bell">🔔</span> Нагадування</div>
+    <div id="notifContent"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#FAEEDA;color:#854F0B;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">↙</span> Імпорт із файлу (.txt)</div>
+    <p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:12px">Вибери .txt файл, який був раніше збережений цим застосунком. Дані будуть додані до наявних (існуючі місяці не перезаписуються).</p>
+    <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#f5f5f5;border:0.5px dashed #bbb;border-radius:10px;font-size:14px;color:#444;cursor:pointer;margin-bottom:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Вибрати .txt файл
+      <input type="file" id="importInput" accept=".txt,text/plain" style="display:none" onchange="handleImport(event)">
+    </label>
+    <div id="importResult" style="display:none;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:4px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#E8F5E9;color:#2E7D32;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">📊</span> Імпорт з Google Sheets (CSV)</div>
+    <p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:10px">Завантаж CSV з твоєї таблиці і вся історія з'явиться в застосунку.</p>
+    <div style="background:#f5f5f5;border-radius:8px;padding:10px 12px;font-size:12px;color:#555;line-height:1.7;margin-bottom:12px">
+      <b>Як скачати CSV з Google Sheets:</b><br>
+      1. Відкрий свою таблицю<br>
+      2. Меню «Файл» → «Завантажити» → «Значення, розділені комою (.csv)»<br>
+      3. Вибери цей файл нижче
+    </div>
+    <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#f5f5f5;border:0.5px dashed #bbb;border-radius:10px;font-size:14px;color:#444;cursor:pointer;margin-bottom:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Вибрати .csv файл
+      <input type="file" id="csvImportInput" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(event)">
+    </label>
+    <div id="csvImportResult" style="display:none;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:4px"></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen">
+  <div class="card">
+    <div class="card-title"><span class="icon icon-elec">⚡</span> Тарифи електроенергії</div>
+    <div class="field-row">
+      <div><div class="field-label">Денний (₴/кВт·год)</div><input type="number" id="t_e_day" step="0.01" oninput="saveTariffs();calcAll()"></div>
+      <div><div class="field-label">Нічний (₴/кВт·год)</div><input type="number" id="t_e_night" step="0.01" oninput="saveTariffs();calcAll()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="icon icon-gas">🔥</span> Тариф газу</div>
+    <div class="field-row">
+      <div><div class="field-label">Ціна (₴/м³)</div><input type="number" id="t_g" step="0.01" oninput="saveTariffs();calcAll()"></div>
+      <div><div class="field-label">Доставка (₴/міс)</div><input type="number" id="t_g_delivery" step="0.01" oninput="saveTariffs();calcAll()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="icon icon-water">💧</span> Тариф холодної води</div>
+    <div class="field-row">
+      <div><div class="field-label">Холодна (₴/м³)</div><input type="number" id="t_wc" step="0.01" oninput="saveTariffs();calcAll()"></div>
+      <div><div class="field-label">Доставка (₴/міс)</div><input type="number" id="t_wc_delivery" step="0.01" oninput="saveTariffs();calcAll()"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#F0F0F0;color:#444;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">🏠</span> Фіксовані витрати</div>
+    <div class="field-row">
+      <div><div class="field-label">Оренда (₴/міс)</div><input type="number" id="t_rent" step="1" oninput="saveTariffs();calcAll()"></div>
+      <div><div class="field-label">Вивіз сміття (₴/міс)</div><input type="number" id="t_garbage" step="0.01" oninput="saveTariffs();calcAll()"></div>
+    </div>
+    <p style="font-size:11px;color:#aaa;margin-top:4px">Встав 0, якщо не потрібно включати до розрахунку</p>
+  </div>
+</div>
+</div>
+
+<div id="aiModal" class="ai-overlay" style="display:none">
+  <div class="ai-modal"><div id="aiModalContent"></div></div>
+</div>
+<input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const MUA=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+const DTAR={e_day:4.32,e_night:2.16,g:7.99,wc:49.0,g_delivery:38.34,wc_delivery:23.50,rent:6500,garbage:0};
+let ST={tariffs:{...DTAR},records:{},curYear:new Date().getFullYear(),curMonth:new Date().getMonth()};
+let photoTarget=null,pendingAI=null,exportScope='current';
+
+// ---- STORAGE: localStorage + IndexedDB backup ----
+const DB_NAME='komunalni',DB_STORE='state',DB_KEY='main';
+let db=null;
+
+function openDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore(DB_STORE);
+    req.onsuccess=e=>{db=e.target.result;res(db);};
+    req.onerror=()=>res(null);
+  });
+}
+async function saveSt(){
+  const json=JSON.stringify(ST);
+  // localStorage (fast)
+  try{localStorage.setItem('kv3',json);}catch(e){}
+  // IndexedDB (persistent, survives cache clear)
+  try{
+    if(!db)await openDB();
+    if(db){const tx=db.transaction(DB_STORE,'readwrite');tx.objectStore(DB_STORE).put(json,DB_KEY);}
+  }catch(e){}
+}
+async function loadSt(){
+  let json=null;
+  // try IndexedDB first
+  try{
+    await openDB();
+    if(db){
+      json=await new Promise((res,rej)=>{
+        const tx=db.transaction(DB_STORE,'readonly');
+        const req=tx.objectStore(DB_STORE).get(DB_KEY);
+        req.onsuccess=()=>res(req.result||null);
+        req.onerror=()=>res(null);
+      });
+    }
+  }catch(e){}
+  // fallback to localStorage
+  if(!json){try{json=localStorage.getItem('kv3');}catch(e){}}
+  if(json){try{ST=JSON.parse(json);}catch(e){}}
+  init();
+}
+
+function init(){
+  loadTariffUI();buildMonthSel();loadMonthData();calcAll();showReminderBanner();
+}
+
+function showReminderBanner(){
+  const now=new Date(),day=now.getDate();
+  const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const isLast=day===lastDay,isFirst=day<=3;
+  const el=document.getElementById('reminderBanner');
+  if(!isLast&&!isFirst){el.innerHTML='';return;}
+  const pm=now.getMonth()===0?11:now.getMonth()-1;
+  const py=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+  if(isFirst&&ST.records[py+'-'+pm]){el.innerHTML='';return;}
+  const[title,sub,bg]=isLast
+    ?['Сьогодні останній день місяця','Зніміть показники всіх лічильників.','#EEEDFE']
+    :['Час подати показники за '+MUA[pm],'Внесіть показники за минулий місяць.','#FFF3CD'];
+  el.innerHTML=`<div class="reminder-banner" style="background:${bg}"><div style="font-size:20px;flex-shrink:0">🔔</div><div style="flex:1"><div style="font-size:13px;font-weight:500;margin-bottom:2px">${title}</div><div style="font-size:12px;color:#666">${sub}</div></div><button onclick="this.closest('.reminder-banner').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#999;padding:0 0 0 8px">×</button></div>`;
+}
+
+function loadTariffUI(){
+  document.getElementById('t_e_day').value=ST.tariffs.e_day;
+  document.getElementById('t_e_night').value=ST.tariffs.e_night;
+  document.getElementById('t_g').value=ST.tariffs.g;
+  document.getElementById('t_wc').value=ST.tariffs.wc;
+  document.getElementById('t_g_delivery').value=ST.tariffs.g_delivery??DTAR.g_delivery;
+  document.getElementById('t_wc_delivery').value=ST.tariffs.wc_delivery??DTAR.wc_delivery;
+  document.getElementById('t_rent').value=ST.tariffs.rent??DTAR.rent;
+  document.getElementById('t_garbage').value=ST.tariffs.garbage??DTAR.garbage;
+}
+function saveTariffs(){
+  ST.tariffs={
+    e_day:+document.getElementById('t_e_day').value||DTAR.e_day,
+    e_night:+document.getElementById('t_e_night').value||DTAR.e_night,
+    g:+document.getElementById('t_g').value||DTAR.g,
+    wc:+document.getElementById('t_wc').value||DTAR.wc,
+    g_delivery:+document.getElementById('t_g_delivery').value||0,
+    wc_delivery:+document.getElementById('t_wc_delivery').value||0,
+    rent:+document.getElementById('t_rent').value||0,
+    garbage:+document.getElementById('t_garbage').value||0
+  };saveSt();
+}
+function buildMonthSel(){
+  const s=document.getElementById('monthSel');s.innerHTML='';
+  const now=new Date();
+  for(let y=now.getFullYear();y>=now.getFullYear()-2;y--){
+    for(let m=11;m>=0;m--){
+      if(y===now.getFullYear()&&m>now.getMonth())continue;
+      const o=document.createElement('option');
+      o.value=y+'-'+m;o.textContent=MUA[m]+' '+y;
+      if(y===ST.curYear&&m===ST.curMonth)o.selected=true;
+      s.appendChild(o);
+    }
+  }
+}
+function changeMonth(d){
+  ST.curMonth+=d;
+  if(ST.curMonth<0){ST.curMonth=11;ST.curYear--;}
+  if(ST.curMonth>11){ST.curMonth=0;ST.curYear++;}
+  buildMonthSel();loadMonthData();
+}
+function loadMonthData(){
+  const s=document.getElementById('monthSel');
+  if(s.value){const p=s.value.split('-');ST.curYear=+p[0];ST.curMonth=+p[1];}
+  document.getElementById('monthTag').textContent=MUA[ST.curMonth]+' '+ST.curYear;
+  const r=ST.records[ST.curYear+'-'+ST.curMonth]||{};
+
+  // якщо для цього місяця даних немає — підтягуємо поточні показники з попереднього місяця
+  if(!r.e_day_prev && !r.e_day_curr){
+    const pm=ST.curMonth===0?11:ST.curMonth-1;
+    const py=ST.curMonth===0?ST.curYear-1:ST.curYear;
+    const prev=ST.records[py+'-'+pm]||{};
+    document.getElementById('e_day_prev').value=prev.e_day_curr||'';
+    document.getElementById('e_night_prev').value=prev.e_night_curr||'';
+    document.getElementById('g_prev').value=prev.g_curr||'';
+    document.getElementById('wc_prev').value=prev.wc_curr||'';
+    document.getElementById('e_day_curr').value='';
+    document.getElementById('e_night_curr').value='';
+    document.getElementById('g_curr').value='';
+    document.getElementById('wc_curr').value='';
+    if(prev.e_day_curr||prev.g_curr||prev.wc_curr){
+      showAutofillHint();
+    }
+  } else {
+    ['e_day_prev','e_day_curr','e_night_prev','e_night_curr','g_prev','g_curr','wc_prev','wc_curr']
+      .forEach(id=>{document.getElementById(id).value=r[id]||'';});
+  }
+  calcAll();
+}
+function showAutofillHint(){
+  const el=document.getElementById('autofillHint');
+  if(!el)return;
+  el.style.display='flex';
+  setTimeout(()=>{el.style.opacity='0';setTimeout(()=>{el.style.display='none';el.style.opacity='1';},600);},3500);
+}
+function gv(id){return parseFloat(document.getElementById(id).value)||0;}
+function fmt(n){return n.toFixed(2)+' ₴';}
+function calcAll(){
+  const t=ST.tariffs;
+  const gDel=t.g_delivery??DTAR.g_delivery;
+  const wDel=t.wc_delivery??DTAR.wc_delivery;
+  const dK=Math.max(0,gv('e_day_curr')-gv('e_day_prev'));
+  const nK=Math.max(0,gv('e_night_curr')-gv('e_night_prev'));
+  const eT=dK*t.e_day+nK*t.e_night;
+  document.getElementById('e_day_kwh').textContent=dK.toFixed(1);
+  document.getElementById('e_night_kwh').textContent=nK.toFixed(1);
+  document.getElementById('e_total').textContent=fmt(eT);
+  const gU=Math.max(0,gv('g_curr')-gv('g_prev'));
+  const gConsume=gU*t.g;
+  document.getElementById('g_usage').textContent=gU.toFixed(2);
+  document.getElementById('g_total').textContent=fmt(gConsume);
+  document.getElementById('g_delivery_val').textContent=fmt(gDel);
+  document.getElementById('g_grand').textContent=fmt(gConsume+gDel);
+  const wU=Math.max(0,gv('wc_curr')-gv('wc_prev'));
+  const wConsume=wU*t.wc;
+  document.getElementById('wc_usage').textContent=wU.toFixed(2);
+  document.getElementById('w_total').textContent=fmt(wConsume);
+  document.getElementById('wc_delivery_val').textContent=fmt(wDel);
+  document.getElementById('wc_grand').textContent=fmt(wConsume+wDel);
+  const rent=ST.tariffs.rent??0;
+  const garbage=ST.tariffs.garbage??0;
+  const utilTotal=eT+gConsume+gDel+wConsume+wDel;
+  const grandTotal=utilTotal+rent+garbage;
+  document.getElementById('grand_total').textContent=fmt(grandTotal);
+  // показуємо деталі фіксованих витрат якщо є
+  const fixedEl=document.getElementById('fixed-costs-detail');
+  if(fixedEl){
+    const parts=[];
+    if(rent>0)parts.push('🏠 Оренда: '+fmt(rent));
+    if(garbage>0)parts.push('🗑 Сміття: '+fmt(garbage));
+    if(parts.length){
+      fixedEl.innerHTML='Комунальні: '+fmt(utilTotal)+'<br>'+parts.join(' · ');
+    }else{
+      fixedEl.innerHTML='';
+    }
+  }
+}
+function getRec(){
+  const t=ST.tariffs;
+  const gDel=t.g_delivery??DTAR.g_delivery;
+  const wDel=t.wc_delivery??DTAR.wc_delivery;
+  const dK=Math.max(0,gv('e_day_curr')-gv('e_day_prev'));
+  const nK=Math.max(0,gv('e_night_curr')-gv('e_night_prev'));
+  const gU=Math.max(0,gv('g_curr')-gv('g_prev'));
+  const wU=Math.max(0,gv('wc_curr')-gv('wc_prev'));
+  const eT=dK*t.e_day+nK*t.e_night;
+  const gT=gU*t.g;
+  const wT=wU*t.wc;
+  const rent=t.rent??0;
+  const garbage=t.garbage??0;
+  return{e_day_prev:gv('e_day_prev'),e_day_curr:gv('e_day_curr'),e_night_prev:gv('e_night_prev'),e_night_curr:gv('e_night_curr'),g_prev:gv('g_prev'),g_curr:gv('g_curr'),wc_prev:gv('wc_prev'),wc_curr:gv('wc_curr'),e_day_kwh:dK,e_night_kwh:nK,e_total:eT,g_usage:gU,g_total:gT,g_delivery:gDel,wc_usage:wU,w_total:wT,wc_delivery:wDel,rent,garbage,grand:eT+gT+gDel+wT+wDel+rent+garbage,paid:false};
+}
+function saveMonth(){
+  const key=ST.curYear+'-'+ST.curMonth,r=getRec();
+  if(ST.records[key])r.paid=ST.records[key].paid;
+  ST.records[key]=r;saveSt();alert('Показники збережено!');
+}
+function markPaid(){
+  const key=ST.curYear+'-'+ST.curMonth;
+  if(!ST.records[key])ST.records[key]=getRec();
+  ST.records[key].paid=true;saveSt();alert('Позначено як сплачено ✓');
+}
+
+/* EXPORT */
+function sortedKeys(){
+  return Object.keys(ST.records).sort((a,b)=>{
+    const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);
+    return by*12+bm-(ay*12+am);
+  });
+}
+function setScope(s,btn){
+  exportScope=s;
+  document.querySelectorAll('.scope-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  genExport();
+}
+function getExportKeys(){
+  const all=sortedKeys();
+  if(exportScope==='all')return all;
+  if(exportScope==='current')return all.filter(k=>k===ST.curYear+'-'+ST.curMonth);
+  return all.slice(0,parseInt(exportScope));
+}
+function genExport(){
+  const keys=getExportKeys();
+  const ta=document.getElementById('exportText');
+  if(!keys.length){ta.value='Немає даних для вибраного періоду.';return;}
+  const L=[];
+  const H='====================================';
+  const h='------------------------------------';
+  L.push(H,'  КОМУНАЛЬНІ ПЛАТЕЖІ — ЗВІТ','  Дата: '+new Date().toLocaleDateString('uk-UA'),H,'');
+  let total=0;
+  keys.forEach(k=>{
+    const[y,m]=k.split('-').map(Number),r=ST.records[k];
+    L.push(h,MUA[m].toUpperCase()+' '+y+(r.paid?' ✅ СПЛАЧЕНО':' ❌ НЕ СПЛАЧЕНО'),h);
+    L.push('⚡ Електроенергія:');
+    L.push('   Денний:   '+r.e_day_prev+' → '+r.e_day_curr+' = '+(r.e_day_kwh||0).toFixed(1)+' кВт·год → '+(r.e_day_kwh*ST.tariffs.e_day).toFixed(2)+' ₴');
+    L.push('   Нічний:   '+r.e_night_prev+' → '+r.e_night_curr+' = '+(r.e_night_kwh||0).toFixed(1)+' кВт·год → '+(r.e_night_kwh*ST.tariffs.e_night).toFixed(2)+' ₴');
+    L.push('   Разом:    '+(r.e_total||0).toFixed(2)+' ₴','');
+    L.push('🔥 Газ:','   '+r.g_prev+' → '+r.g_curr+' = '+(r.g_usage||0).toFixed(3)+' м³ → '+(r.g_total||0).toFixed(2)+' ₴');
+    L.push('   Доставка: '+(r.g_delivery||0).toFixed(2)+' ₴');
+    L.push('   Разом:    '+((r.g_total||0)+(r.g_delivery||0)).toFixed(2)+' ₴','');
+    L.push('💧 Вода (холодна):','   '+r.wc_prev+' → '+r.wc_curr+' = '+(r.wc_usage||0).toFixed(3)+' м³ → '+(r.w_total||0).toFixed(2)+' ₴');
+    L.push('   Доставка: '+(r.wc_delivery||0).toFixed(2)+' ₴');
+    L.push('   Разом:    '+((r.w_total||0)+(r.wc_delivery||0)).toFixed(2)+' ₴','');
+    const utilSum=(r.e_total||0)+(r.g_total||0)+(r.g_delivery||0)+(r.w_total||0)+(r.wc_delivery||0);
+    if((r.rent||0)>0||( r.garbage||0)>0){
+      L.push('— — — — — — — — — — — — — — — — — —');
+      L.push('🔧 Комунальні разом: '+utilSum.toFixed(2)+' ₴');
+      if((r.rent||0)>0)L.push('🏠 Оренда:    '+(r.rent||0).toFixed(2)+' ₴');
+      if((r.garbage||0)>0)L.push('🗑 Сміття:    '+(r.garbage||0).toFixed(2)+' ₴');
+      L.push('');
+    }
+    L.push('💰 ДО СПЛАТИ: '+r.grand.toFixed(2)+' ₴','');
+    total+=r.grand;
+  });
+  if(keys.length>1){L.push(H,'  РАЗОМ: '+total.toFixed(2)+' ₴','  Середній: '+(total/keys.length).toFixed(2)+' ₴',H);}
+  ta.value=L.join('\n');
+}
+function copyExport(){
+  const ta=document.getElementById('exportText');ta.select();
+  try{document.execCommand('copy');alert('Скопійовано!');}
+  catch(e){navigator.clipboard.writeText(ta.value).then(()=>alert('Скопійовано!')).catch(()=>alert('Виділи текст вручну Ctrl+A → Ctrl+C'));}
+}
+function downloadExport(){
+  const text=document.getElementById('exportText').value;
+  if(!text||text.startsWith('Немає')){alert('Немає даних.');return;}
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
+  a.download='komunalni_'+new Date().toISOString().slice(0,10)+'.txt';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+/* IMPORT */
+function handleImport(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>parseImport(ev.target.result);
+  reader.onerror=()=>showImportResult(false,'Не вдалося прочитати файл.');
+  reader.readAsText(file,'utf-8');
+  e.target.value='';
+}
+
+function parseImport(text){
+  const lines=text.split('\n').map(l=>l.trim());
+  let imported=0,skipped=0,curYear=null,curMonth=null;
+  const rec={};
+
+  // helpers
+  const pf=s=>parseFloat(s.replace(',','.'))||0;
+  const arrow=/→/;
+
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i];
+
+    // detect month header e.g. "СІЧЕНЬ 2025 [СПЛАЧЕНО]"
+    const mMatch=MUA.map((m,idx)=>({idx,re:new RegExp('^'+m.toUpperCase()+'\\s+(\\d{4})')}))
+      .find(({re})=>re.test(l));
+    if(mMatch){
+      const m=mMatch.re.exec(l);
+      curYear=parseInt(m[1]);
+      curMonth=mMatch.idx;
+      const paid=l.includes('[СПЛАЧЕНО]');
+      rec[curYear+'-'+curMonth]={paid,e_day_prev:0,e_day_curr:0,e_night_prev:0,e_night_curr:0,g_prev:0,g_curr:0,wc_prev:0,wc_curr:0};
+      continue;
+    }
+    if(curYear===null)continue;
+    const r=rec[curYear+'-'+curMonth];
+    if(!r)continue;
+
+    // Денний:  12345 → 12400 = ...
+    if(l.startsWith('Денний:')&&arrow.test(l)){
+      const p=l.match(/Денний:\s*([\d.]+)\s*→\s*([\d.]+)/);
+      if(p){r.e_day_prev=pf(p[1]);r.e_day_curr=pf(p[2]);}
+    }
+    // Нічний:
+    else if(l.startsWith('Нічний:')&&arrow.test(l)){
+      const p=l.match(/Нічний:\s*([\d.]+)\s*→\s*([\d.]+)/);
+      if(p){r.e_night_prev=pf(p[1]);r.e_night_curr=pf(p[2]);}
+    }
+    // Газ — next line has values
+    else if(l==='Газ:'){
+      const next=lines[i+1]||'';
+      const p=next.match(/([\d.]+)\s*→\s*([\d.]+)/);
+      if(p){r.g_prev=pf(p[1]);r.g_curr=pf(p[2]);}
+    }
+    // Вода — next line
+    else if(l.startsWith('Вода')){
+      const next=lines[i+1]||'';
+      const p=next.match(/([\d.]+)\s*→\s*([\d.]+)/);
+      if(p){r.wc_prev=pf(p[1]);r.wc_curr=pf(p[2]);}
+    }
+  }
+
+  // calculate derived fields and merge
+  const t=ST.tariffs;
+  Object.entries(rec).forEach(([key,r])=>{
+    if(ST.records[key]){skipped++;return;}
+    const dK=Math.max(0,r.e_day_curr-r.e_day_prev);
+    const nK=Math.max(0,r.e_night_curr-r.e_night_prev);
+    const gU=Math.max(0,r.g_curr-r.g_prev);
+    const wU=Math.max(0,r.wc_curr-r.wc_prev);
+    ST.records[key]={...r,e_day_kwh:dK,e_night_kwh:nK,e_total:dK*t.e_day+nK*t.e_night,g_usage:gU,g_total:gU*t.g,wc_usage:wU,w_total:wU*t.wc,grand:dK*t.e_day+nK*t.e_night+gU*t.g+wU*t.wc};
+    imported++;
+  });
+
+  if(imported>0){saveSt();buildMonthSel();loadMonthData();}
+  const ok=imported>0;
+  let msg='';
+  if(imported>0)msg+=`Імпортовано місяців: ${imported}. `;
+  if(skipped>0)msg+=`Пропущено (вже є): ${skipped}. `;
+  if(imported===0&&skipped===0)msg='Не вдалося розпізнати дані у файлі. Переконайся, що це файл, збережений цим застосунком.';
+  showImportResult(ok,msg);
+}
+
+/* CSV IMPORT from Google Sheets */
+function handleCSVImport(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>parseCSVImport(ev.target.result);
+  reader.onerror=()=>showCSVImportResult(false,'Не вдалося прочитати файл.');
+  reader.readAsText(file,'utf-8');
+  e.target.value='';
+}
+
+function parseCSVRows(text){
+  // Simple CSV parser that handles quoted fields
+  const rows=[];
+  const lines=text.split(/\r?\n/);
+  for(const line of lines){
+    if(!line.trim())continue;
+    const cols=[];
+    let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){
+        if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+        else inQ=!inQ;
+      }else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=ch;
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  }
+  return rows;
+}
+
+// Mapping of Ukrainian month names as they appear in the Google Sheet
+const SHEET_MONTHS={
+  'Січень':0,'Лютий':1,'Березень':2,'Квітень':3,'Травень':4,'Червень':5,
+  'Липень':6,'Серпень':7,'Вересень':8,'Жовтень':9,'Листопад':10,'Грудень':11
+};
+
+function parseCSVImport(text){
+  const rows=parseCSVRows(text);
+  // Find the header row with "Місяць"
+  let headerIdx=-1;
+  for(let i=0;i<rows.length;i++){
+    if(rows[i][0]==='Місяць'){headerIdx=i;break;}
+  }
+  if(headerIdx===-1){
+    showCSVImportResult(false,'Не вдалося розпізнати формат таблиці. Переконайся, що перша колонка називається «Місяць».');
+    return;
+  }
+  const headers=rows[headerIdx];
+  // Find column indices by header content
+  const col=(substr)=>{
+    const idx=headers.findIndex(h=>h&&h.includes(substr));
+    return idx;
+  };
+  // Column mapping based on the actual sheet structure:
+  // Місяць | Газ(показник) | Газ(спожито) | Елек.день(показник) | Елек.день(спожито) | Елек.ніч(показник) | Елек.ніч(спожито) | Елек.разом(пок) | Елек.разом(спожито) | Вода(показник) | Вода(спожито)
+  const iMonth=0;
+  const iGasCurr=1;   // показник газу (поточний)
+  const iEDayCurr=3;  // показник ел.день (поточний)
+  const iENightCurr=5;// показник ел.ніч (поточний)
+  const iWaterCurr=9; // показник води (поточний)
+
+  let imported=0,skipped=0,errors=0;
+  const t=ST.tariffs;
+
+  // We need to build prev values from previous row
+  let prevRow=null;
+
+  for(let i=headerIdx+1;i<rows.length;i++){
+    const row=rows[i];
+    const monthCell=(row[iMonth]||'').trim();
+    if(!monthCell)continue;
+
+    // Parse "Листопад 2025" format
+    const parts=monthCell.split(' ');
+    if(parts.length<2)continue;
+    const mName=parts[0];
+    const year=parseInt(parts[1]);
+    const month=SHEET_MONTHS[mName];
+    if(month===undefined||isNaN(year))continue;
+
+    const key=year+'-'+month;
+    if(ST.records[key]){skipped++;prevRow=row;continue;}
+
+    const pf=s=>{
+      if(!s||s==='-')return null;
+      const n=parseFloat(String(s).replace(',','.'));
+      return isNaN(n)?null:n;
+    };
+
+    const gCurr=pf(row[iGasCurr]);
+    const eDayCurr=pf(row[iEDayCurr]);
+    const eNightCurr=pf(row[iENightCurr]);
+    const wCurr=pf(row[iWaterCurr]);
+
+    // Get prev values from previous row's current readings
+    let gPrev=null,eDayPrev=null,eNightPrev=null,wPrev=null;
+    if(prevRow){
+      gPrev=pf(prevRow[iGasCurr]);
+      eDayPrev=pf(prevRow[iEDayCurr]);
+      eNightPrev=pf(prevRow[iENightCurr]);
+      wPrev=pf(prevRow[iWaterCurr]);
+    }
+
+    // Skip rows where current values are negative (template rows) or missing
+    if(gCurr===null&&eDayCurr===null&&eNightCurr===null&&wCurr===null){prevRow=row;continue;}
+    if((gCurr||0)<0||(eDayCurr||0)<0||(eNightCurr||0)<0||(wCurr||0)<0){prevRow=row;continue;}
+
+    const dK=Math.max(0,(eDayCurr||0)-(eDayPrev||0));
+    const nK=Math.max(0,(eNightCurr||0)-(eNightPrev||0));
+    const gU=Math.max(0,(gCurr||0)-(gPrev||0));
+    const wU=Math.max(0,(wCurr||0)-(wPrev||0));
+    const gDel=t.g_delivery??0;
+    const wDel=t.wc_delivery??0;
+    const rent=t.rent??0;
+    const garbage=t.garbage??0;
+    const eT=dK*t.e_day+nK*t.e_night;
+    const gT=gU*t.g;
+    const wT=wU*t.wc;
+
+    ST.records[key]={
+      e_day_prev:eDayPrev||0, e_day_curr:eDayCurr||0,
+      e_night_prev:eNightPrev||0, e_night_curr:eNightCurr||0,
+      g_prev:gPrev||0, g_curr:gCurr||0,
+      wc_prev:wPrev||0, wc_curr:wCurr||0,
+      e_day_kwh:dK, e_night_kwh:nK, e_total:eT,
+      g_usage:gU, g_total:gT, g_delivery:gDel,
+      wc_usage:wU, w_total:wT, wc_delivery:wDel,
+      rent, garbage,
+      grand:eT+gT+gDel+wT+wDel+rent+garbage,
+      paid:false
+    };
+    imported++;
+    prevRow=row;
+  }
+
+  if(imported>0){saveSt();buildMonthSel();loadMonthData();}
+  let msg='';
+  if(imported>0)msg+=`Імпортовано місяців: ${imported}. `;
+  if(skipped>0)msg+=`Пропущено (вже є): ${skipped}. `;
+  if(imported===0&&skipped===0)msg='Не вдалося знайти дані. Переконайся, що завантажуєш правильний CSV файл.';
+  showCSVImportResult(imported>0,msg);
+}
+
+function showCSVImportResult(ok,msg){
+  const el=document.getElementById('csvImportResult');
+  el.style.display='block';
+  el.style.background=ok?'#EAF3DE':'#FAECE7';
+  el.style.color=ok?'#3B6D11':'#993C1D';
+  el.textContent=(ok?'✓ ':'✗ ')+msg;
+}
+
+function showImportResult(ok,msg){
+  const el=document.getElementById('importResult');
+  el.style.display='block';
+  el.style.background=ok?'#EAF3DE':'#FAECE7';
+  el.style.color=ok?'#3B6D11':'#993C1D';
+  el.textContent=(ok?'✓ ':'✗ ')+msg;
+}
+function renderNotif(){
+  const el=document.getElementById('notifContent');
+  if(!('Notification' in window)){
+    el.innerHTML=`<p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:10px">Встанови застосунок на головний екран Android (PWA) — тоді push-нагадування будуть доступні. Поки що нагадування показуються як банер всередині застосунку.</p>
+    <div style="background:#f5f5f5;border-radius:8px;padding:12px;font-size:12px;color:#555;line-height:1.6">
+      <b>Як встановити PWA на Android:</b><br>
+      1. Відкрий цей файл у Chrome<br>
+      2. Натисни ⋮ (меню) → "Додати на головний екран"<br>
+      3. Підтверди — з'явиться іконка на робочому столі
+    </div>`;
+    return;
+  }
+  const p=Notification.permission;
+  if(p==='granted'){
+    el.innerHTML=`<div class="notif-row"><span class="dot dot-on"></span><span style="font-weight:500">Push-нагадування увімкнено</span></div>
+    <p style="font-size:12px;color:#888;line-height:1.5;margin-bottom:10px">Спрацьовують в останній день місяця і перші 3 дні нового місяця при відкритті застосунку.</p>
+    <button class="btn-secondary" style="margin-top:0" onclick="testNotif()">Надіслати тестове нагадування</button>`;
+  }else if(p==='denied'){
+    el.innerHTML=`<div class="notif-row"><span class="dot dot-off"></span><span>Заблоковано браузером</span></div>
+    <p style="font-size:12px;color:#888;line-height:1.5">Дозволь сповіщення від цього сайту в налаштуваннях браузера.</p>`;
+  }else{
+    el.innerHTML=`<div class="notif-row"><span class="dot dot-pending"></span><span style="color:#888">Нагадування вимкнені</span></div>
+    <p style="font-size:12px;color:#888;line-height:1.5;margin-bottom:12px">Увімкни, щоб отримувати сповіщення в останній день місяця і перші 3 дні нового.</p>
+    <button class="btn-primary" style="margin-top:0" onclick="askNotif()">Увімкнути нагадування 🔔</button>`;
+  }
+}
+async function askNotif(){await Notification.requestPermission();renderNotif();if(Notification.permission==='granted')testNotif();}
+function testNotif(){new Notification('Комунальні платежі 🔔',{body:'Не забудь подати показники лічильників!'});}
+
+function scheduleIfNeeded(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  const now=new Date(),day=now.getDate();
+  const last=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  if(day===last)setTimeout(()=>new Notification('Комунальні платежі',{body:'Останній день місяця — зніміть показники!'}),1500);
+  if(day<=3)setTimeout(()=>new Notification('Комунальні платежі',{body:'Не забудьте внести показники за минулий місяць!'}),1500);
+}
+
+/* PHOTO / AI */
+function triggerPhoto(t){photoTarget=t;document.getElementById('photoInput').value='';document.getElementById('photoInput').click();}
+async function handlePhoto(e){
+  const f=e.target.files[0];if(!f)return;
+  const b64=await toB64(f);
+  showAiLoad('data:'+f.type+';base64,'+b64);
+  try{const r=await recMeter(b64,f.type,photoTarget);showAiOk('data:'+f.type+';base64,'+b64,r);}
+  catch(err){showAiErr(err.message);}
+}
+function toB64(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=()=>rej(new Error('Помилка'));r.readAsDataURL(f);});}
+async function recMeter(b64,mime,t){
+  const lbl={elec:'двотарифний лічильник електроенергії',gas:'лічильник газу',water:'лічильник холодної води'};
+  const p=`Фото: ${lbl[t]}. Роздивись цифри. ТІЛЬКИ JSON:\n${t==='elec'?'{"day":12345.67,"night":9876.54}':'{"value":12345.678}'}\nНе можеш — {"error":"не вдалося розпізнати"}.`;
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:p}]}]})});
+  if(!resp.ok)throw new Error('Помилка API '+resp.status);
+  const d=await resp.json();
+  const txt=d.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+  const j=JSON.parse(txt);if(j.error)throw new Error(j.error);return j;
+}
+function showAiLoad(src){document.getElementById('aiModalContent').innerHTML=`<img src="${src}" class="photo-preview"><div class="spinner"></div><h3>Розпізнаю...</h3><p>AI аналізує зображення</p>`;document.getElementById('aiModal').style.display='flex';}
+function showAiOk(src,r){
+  pendingAI=r;const t=photoTarget;
+  const rows=t==='elec'?`<div class="ai-result-row"><span>Денний</span><span>${r.day??'—'}</span></div><div class="ai-result-row"><span>Нічний</span><span>${r.night??'—'}</span></div>`:`<div class="ai-result-row"><span>Показник</span><span>${r.value??'—'}</span></div>`;
+  document.getElementById('aiModalContent').innerHTML=`<img src="${src}" class="photo-preview"><h3>Розпізнано</h3><p>Перевір і підтверди</p><div class="ai-result">${rows}</div><div class="modal-btns"><button class="btn-cancel" onclick="closeAI()">Скасувати</button><button class="btn-confirm" onclick="applyAI()">Застосувати</button></div>`;
+}
+function showAiErr(msg){document.getElementById('aiModalContent').innerHTML=`<h3>Не вдалося розпізнати</h3><p class="ai-error">${msg}</p><p style="font-size:13px;color:#888;margin-bottom:16px">Зроби чіткіше фото при хорошому освітленні.</p><div class="modal-btns"><button class="btn-cancel" onclick="closeAI()">Закрити</button><button class="btn-confirm" onclick="retryPhoto()">Повторити</button></div>`;}
+function applyAI(){
+  const r=pendingAI,t=photoTarget;
+  if(t==='elec'){if(r.day!=null)document.getElementById('e_day_curr').value=r.day;if(r.night!=null)document.getElementById('e_night_curr').value=r.night;}
+  else if(t==='gas'&&r.value!=null)document.getElementById('g_curr').value=r.value;
+  else if(t==='water'&&r.value!=null)document.getElementById('wc_curr').value=r.value;
+  calcAll();closeAI();
+}
+function retryPhoto(){closeAI();triggerPhoto(photoTarget);}
+function closeAI(){document.getElementById('aiModal').style.display='none';pendingAI=null;}
+
+/* HISTORY */
+function renderHistory(){
+  const el=document.getElementById('hist-list');
+  const keys=sortedKeys();
+  if(!keys.length){el.innerHTML='<div class="empty">Немає збережених даних</div>';return;}
+  el.innerHTML=keys.map(k=>{
+    const[y,m]=k.split('-').map(Number),r=ST.records[k];
+    return`<div class="hist-item"><div class="hist-top"><div class="hist-month">${MUA[m]} ${y}</div><div class="hist-total">${r.grand.toFixed(2)} ₴</div></div><div style="display:flex;justify-content:space-between;align-items:center"><div class="hist-sub">⚡${(r.e_day_kwh||0).toFixed(0)}+${(r.e_night_kwh||0).toFixed(0)}кВт &nbsp;🔥${(r.g_usage||0).toFixed(1)}м³ &nbsp;💧${(r.wc_usage||0).toFixed(1)}м³</div><span class="badge ${r.paid?'badge-paid':'badge-unpaid'}">${r.paid?'Сплачено':'Не сплачено'}</span></div></div>`;
+  }).join('');
+}
+
+/* STATS */
+let CH={};
+function renderStats(){
+  const keys=Object.keys(ST.records).sort((a,b)=>{const[ay,am]=a.split('-').map(Number),[by,bm]=b.split('-').map(Number);return ay*12+am-(by*12+bm);});
+  if(!keys.length){document.getElementById('stat-cards').innerHTML='<div class="empty" style="grid-column:1/-1">Немає даних</div>';return;}
+  const vals=keys.map(k=>ST.records[k]);
+  const tot=vals.map(v=>v.grand);
+  const avg=tot.reduce((a,b)=>a+b,0)/tot.length;
+  const elK=vals.map(v=>(v.e_day_kwh||0)+(v.e_night_kwh||0));
+  const avgE=elK.reduce((a,b)=>a+b,0)/elK.length;
+  const wcD=vals.map(v=>v.wc_usage||0);
+  const avgW=wcD.reduce((a,b)=>a+b,0)/wcD.length;
+  document.getElementById('stat-cards').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${avg.toFixed(0)} ₴</div><div class="stat-lbl">Середній платіж</div></div>
+    <div class="stat-card"><div class="stat-val">${Math.max(...tot).toFixed(0)} ₴</div><div class="stat-lbl">Максимум</div></div>
+    <div class="stat-card"><div class="stat-val">${avgE.toFixed(0)} кВт</div><div class="stat-lbl">Сер. електроенергія</div></div>
+    <div class="stat-card"><div class="stat-val">${avgW.toFixed(1)} м³</div><div class="stat-lbl">Сер. вода</div></div>
+    <div class="stat-card"><div class="stat-val">${vals.filter(v=>v.paid).length}/${vals.length}</div><div class="stat-lbl">Сплачено місяців</div></div>`;
+  const lbl=keys.map(k=>{const[y,m]=k.split('-').map(Number);return MUA[m].slice(0,3)+" '"+String(y).slice(-2);});
+  const bo={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11},maxRotation:45,autoSkip:false}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11}}}}};
+  ['chartTotal','chartElec','chartGas','chartWater'].forEach(id=>{if(CH[id]){CH[id].destroy();delete CH[id];}});
+  CH.chartTotal=new Chart(document.getElementById('chartTotal'),{type:'bar',data:{labels:lbl,datasets:[{data:tot.map(v=>+v.toFixed(2)),backgroundColor:'rgba(53,99,200,.7)',borderRadius:4}]},options:{...bo}});
+  CH.chartElec=new Chart(document.getElementById('chartElec'),{type:'line',data:{labels:lbl,datasets:[{data:elK.map(v=>+v.toFixed(1)),borderColor:'#3B6D11',backgroundColor:'rgba(59,109,17,.1)',tension:.3,fill:true,pointRadius:3}]},options:{...bo}});
+  CH.chartGas=new Chart(document.getElementById('chartGas'),{type:'line',data:{labels:lbl,datasets:[{data:vals.map(v=>+(v.g_usage||0).toFixed(2)),borderColor:'#854F0B',backgroundColor:'rgba(133,79,11,.1)',tension:.3,fill:true,pointRadius:3}]},options:{...bo}});
+  CH.chartWater=new Chart(document.getElementById('chartWater'),{type:'line',data:{labels:lbl,datasets:[{data:wcD.map(v=>+v.toFixed(3)),borderColor:'#185FA5',backgroundColor:'rgba(24,95,165,.1)',tension:.3,fill:true,pointRadius:3}]},options:{...bo}});
+}
+
+function downloadChart(canvasId, name){
+  const canvas=document.getElementById(canvasId);
+  if(!canvas){alert('Графік не знайдено.');return;}
+
+  // create offscreen canvas with white background + padding
+  const pad=20;
+  const off=document.createElement('canvas');
+  off.width=canvas.width+pad*2;
+  off.height=canvas.height+pad*2;
+  const ctx=off.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,off.width,off.height);
+  ctx.drawImage(canvas,pad,pad);
+
+  const date=new Date().toISOString().slice(0,10);
+  const a=document.createElement('a');
+  a.href=off.toDataURL('image/png');
+  a.download='komunalni_'+name+'_'+date+'.png';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+function showScreen(name,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='history')renderHistory();
+  if(name==='stats')renderStats();
+  if(name==='export'){genExport();renderNotif();}
+}
+
+loadSt();
+scheduleIfNeeded();
+</script>
+</body>
+</html>
