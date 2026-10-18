@@ -747,7 +747,22 @@ function parseCSVImport(text){
   if(iWaterCurr===-1)iWaterCurr=9;
 
   // Перший рядок даних — після заголовків
-  const dataStart=isH2Header?headerIdx+2:headerIdx+1;
+  // Заголовки можуть займати 1 або 2 рядки (через переноси рядків у клітинках)
+  // Просто шукаємо перший рядок де col[0] містить місяць у форматі "Назва РРРР"
+  let dataStart=headerIdx+1;
+  while(dataStart<rows.length){
+    const cell=(rows[dataStart][0]||'').trim();
+    const parts=cell.split(' ');
+    if(parts.length>=2&&SHEET_MONTHS[parts[0]]!==undefined&&!isNaN(parseInt(parts[1])))break;
+    dataStart++;
+    if(dataStart>headerIdx+5)break; // не шукаємо далі 5 рядків
+  }
+
+  // Фіксовані індекси відповідно до реальної структури таблиці:
+  // 0=Місяць, 1=Газ показник, 2=Газ спожито, 3=Елек.день показник,
+  // 4=Елек.день спожито, 5=Елек.ніч показник, 6=Елек.ніч спожито,
+  // 7=Елек.разом показник, 8=Елек.разом спожито, 9=Вода показник, 10=Вода спожито
+  const CI={gas:1, eDay:3, eNight:5, water:9};
 
   let imported=0,skipped=0;
   const t=ST.tariffs;
@@ -755,38 +770,43 @@ function parseCSVImport(text){
 
   for(let i=dataStart;i<rows.length;i++){
     const row=rows[i];
-    const monthCell=(row[iMonth]||'').trim();
+    const monthCell=(row[0]||'').trim();
     if(!monthCell)continue;
 
     // Parse "Листопад 2025" format
     const parts=monthCell.split(' ');
     if(parts.length<2)continue;
     const mName=parts[0];
-    const year=parseInt(parts[1]);
+    const year=parseInt(parts[parts.length-1]);
     const month=SHEET_MONTHS[mName];
     if(month===undefined||isNaN(year))continue;
+
+    // Зупиняємось якщо дійшли до секції "Вартість"
+    if(mName==='Вартість')break;
 
     const key=year+'-'+month;
     if(ST.records[key]){skipped++;prevRow=row;continue;}
 
+    // Парсимо число: прибираємо пробіли, замінюємо кому на крапку
     const pf=s=>{
-      if(!s||s==='-')return null;
-      const n=parseFloat(String(s).replace(',','.'));
+      if(!s||s==='-'||s.trim()===''||s.trim()==='-')return null;
+      const cleaned=String(s).replace(/\s/g,'').replace(',','.');
+      const n=parseFloat(cleaned);
       return isNaN(n)?null:n;
     };
 
-    const gCurr=pf(row[iGasCurr]);
-    const eDayCurr=pf(row[iEDayCurr]);
-    const eNightCurr=pf(row[iENightCurr]);
-    const wCurr=pf(row[iWaterCurr]);
+    const gCurr=pf(row[CI.gas]);
+    const eDayCurr=pf(row[CI.eDay]);
+    const eNightCurr=pf(row[CI.eNight]);
+    const wCurr=pf(row[CI.water]);
 
-    // Get prev values from previous row's current readings
+    // Попередні показники — з попереднього рядка
     let gPrev=null,eDayPrev=null,eNightPrev=null,wPrev=null;
     if(prevRow){
-      gPrev=pf(prevRow[iGasCurr]);
-      eDayPrev=pf(prevRow[iEDayCurr]);
-      eNightPrev=pf(prevRow[iENightCurr]);
-      wPrev=pf(prevRow[iWaterCurr]);
+      gPrev=pf(prevRow[CI.gas]);
+      eDayPrev=pf(prevRow[CI.eDay]);
+      eNightPrev=pf(prevRow[CI.eNight]);
+      wPrev=pf(prevRow[CI.water]);
     }
 
     // Skip rows where current values are negative (template rows) or missing
@@ -826,10 +846,6 @@ function parseCSVImport(text){
   if(imported>0)msg+=`Імпортовано місяців: ${imported}. `;
   if(skipped>0)msg+=`Пропущено (вже є): ${skipped}. `;
   if(imported===0&&skipped===0)msg='Не вдалося знайти дані. Переконайся, що завантажуєш правильний CSV файл з Google Sheets (Файл → Завантажити → CSV).';
-  // Додаємо діагностику колонок якщо щось пішло не так
-  if(imported>0&&skipped===0){
-    msg+=` (колонки: газ=${iGasCurr}, день=${iEDayCurr}, ніч=${iENightCurr}, вода=${iWaterCurr})`;
-  }
   showCSVImportResult(imported>0,msg);
 }
 
