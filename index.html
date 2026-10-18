@@ -228,6 +228,15 @@ input[type=file]{display:none}
     <div id="importResult" style="display:none;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:4px"></div>
   </div>
 
+  <div class="card" id="syncCard">
+    <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#E8F5E9;color:#2E7D32;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🔗</span> Синхронізація з Google Sheets</div>
+    <p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:12px">Підтягнути всю історію показників напряму з вашої Google таблиці одним натисканням.</p>
+    <button class="btn-primary" onclick="syncFromSheet(false)" id="syncBtn">🔄 Синхронізувати (додати нові)</button>
+    <button style="width:100%;padding:10px;background:#fff3cd;color:#856404;border:0.5px solid #f0ad00;border-radius:12px;font-size:14px;cursor:pointer;margin-top:6px" onclick="syncFromSheet(true)">⚠️ Синхронізувати (перезаписати всі)</button>
+    <div id="syncResult" style="display:none;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:8px"></div>
+    <p style="font-size:11px;color:#aaa;margin-top:8px">URL скрипту налаштовується у вкладці «Тарифи» → Синхронізація</p>
+  </div>
+
   <div class="card">
     <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#E8F5E9;color:#2E7D32;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">📊</span> Імпорт з Google Sheets (CSV)</div>
     <p style="font-size:13px;color:#888;line-height:1.5;margin-bottom:10px">Завантаж CSV з твоєї таблиці і вся історія з'явиться в застосунку.</p>
@@ -240,7 +249,12 @@ input[type=file]{display:none}
     <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#f5f5f5;border:0.5px dashed #bbb;border-radius:10px;font-size:14px;color:#444;cursor:pointer;margin-bottom:8px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
       Вибрати .csv файл
-      <input type="file" id="csvImportInput" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(event)">
+      <input type="file" id="csvImportInput" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(event,false)">
+    </label>
+    <label style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#fff3cd;border:0.5px dashed #f0ad00;border-radius:10px;font-size:13px;color:#856404;cursor:pointer;margin-bottom:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      Замінити існуючі дані з CSV (перезапис)
+      <input type="file" id="csvImportOverwriteInput" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(event,true)">
     </label>
     <div id="csvImportResult" style="display:none;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;margin-top:4px"></div>
   </div>
@@ -276,6 +290,13 @@ input[type=file]{display:none}
       <div><div class="field-label">Вивіз сміття (₴/міс)</div><input type="number" id="t_garbage" step="0.01" oninput="saveTariffs();calcAll()"></div>
     </div>
     <p style="font-size:11px;color:#aaa;margin-top:4px">Встав 0, якщо не потрібно включати до розрахунку</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span style="width:20px;height:20px;border-radius:6px;background:#E8F5E9;color:#2E7D32;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">🔗</span> Синхронізація з Google Sheets</div>
+    <p style="font-size:12px;color:#888;line-height:1.5;margin-bottom:10px">Вставте URL вашого Apps Script Web App — і кнопка «Синхронізувати» у вкладці Експорт буде підтягувати дані напряму з таблиці.</p>
+    <div class="field-label">URL Apps Script Web App</div>
+    <input type="url" id="t_sheets_url" placeholder="https://script.google.com/macros/s/..." style="width:100%;padding:8px;border:0.5px solid #ccc;border-radius:8px;font-size:12px;background:#fff;color:#1a1a1a;margin-top:4px;margin-bottom:6px" oninput="saveSheetsUrl()">
+    <p style="font-size:11px;color:#aaa">Як отримати URL: Розширення → Apps Script → Розгорнути → Як веб-застосунок</p>
   </div>
 </div>
 </div>
@@ -335,7 +356,7 @@ async function loadSt(){
 }
 
 function init(){
-  loadTariffUI();buildMonthSel();loadMonthData();calcAll();showReminderBanner();
+  loadTariffUI();loadSheetsUrlUI();buildMonthSel();loadMonthData();calcAll();showReminderBanner();
 }
 
 function showReminderBanner(){
@@ -649,11 +670,11 @@ function parseImport(text){
 }
 
 /* CSV IMPORT from Google Sheets */
-function handleCSVImport(e){
+function handleCSVImport(e,overwrite){
   const file=e.target.files[0];
   if(!file)return;
   const reader=new FileReader();
-  reader.onload=ev=>parseCSVImport(ev.target.result);
+  reader.onload=ev=>parseCSVImport(ev.target.result,overwrite);
   reader.onerror=()=>showCSVImportResult(false,'Не вдалося прочитати файл.');
   reader.readAsText(file,'utf-8');
   e.target.value='';
@@ -687,7 +708,7 @@ const SHEET_MONTHS={
   'Липень':6,'Серпень':7,'Вересень':8,'Жовтень':9,'Листопад':10,'Грудень':11
 };
 
-function parseCSVImport(text){
+function parseCSVImport(text,overwrite){
   const rows=parseCSVRows(text);
 
   // Google Sheets CSV може мати 1 або 2 рядки заголовків через об'єднані клітинки.
@@ -762,7 +783,7 @@ function parseCSVImport(text){
   // 0=Місяць, 1=Газ показник, 2=Газ спожито, 3=Елек.день показник,
   // 4=Елек.день спожито, 5=Елек.ніч показник, 6=Елек.ніч спожито,
   // 7=Елек.разом показник, 8=Елек.разом спожито, 9=Вода показник, 10=Вода спожито
-  const CI={gas:1, eDay:3, eNight:5, water:9};
+  const CI={gas:1, gasUsage:2, eDay:3, eDayUsage:4, eNight:5, eNightUsage:6, water:9, waterUsage:10};
 
   let imported=0,skipped=0;
   const t=ST.tariffs;
@@ -784,8 +805,14 @@ function parseCSVImport(text){
     // Зупиняємось якщо дійшли до секції "Вартість"
     if(mName==='Вартість')break;
 
+    // Пропускаємо майбутні місяці (ще не заповнені)
+    const rowDate=new Date(year,month,1);
+    const today=new Date();
+    today.setDate(1);today.setHours(0,0,0,0);
+    if(rowDate>=today){prevRow=row;continue;}
+
     const key=year+'-'+month;
-    if(ST.records[key]){skipped++;prevRow=row;continue;}
+    if(ST.records[key]&&!overwrite){skipped++;prevRow=row;continue;}
 
     // Парсимо число: прибираємо пробіли, замінюємо кому на крапку
     const pf=s=>{
@@ -809,14 +836,22 @@ function parseCSVImport(text){
       wPrev=pf(prevRow[CI.water]);
     }
 
-    // Skip rows where current values are negative (template rows) or missing
+    // Пропускаємо рядки без даних або з від'ємними значеннями (формули-заповнювачі)
     if(gCurr===null&&eDayCurr===null&&eNightCurr===null&&wCurr===null){prevRow=row;continue;}
     if((gCurr||0)<0||(eDayCurr||0)<0||(eNightCurr||0)<0||(wCurr||0)<0){prevRow=row;continue;}
+    // Пропускаємо рядки де всі показники нулі (шаблонні рядки)
+    if((gCurr||0)===0&&(eDayCurr||0)===0&&(eNightCurr||0)===0&&(wCurr||0)===0){prevRow=row;continue;}
 
-    const dK=Math.max(0,(eDayCurr||0)-(eDayPrev||0));
-    const nK=Math.max(0,(eNightCurr||0)-(eNightPrev||0));
-    const gU=Math.max(0,(gCurr||0)-(gPrev||0));
-    const wU=Math.max(0,(wCurr||0)-(wPrev||0));
+    // Витрату беремо з колонки "спожито" якщо є, інакше рахуємо різницю
+    const gUsageCol=pf(row[CI.gasUsage]);
+    const eDayUsageCol=pf(row[CI.eDayUsage]);
+    const eNightUsageCol=pf(row[CI.eNightUsage]);
+    const wUsageCol=pf(row[CI.waterUsage]);
+
+    const dK=eDayUsageCol!==null&&eDayUsageCol>=0 ? eDayUsageCol : Math.max(0,(eDayCurr||0)-(eDayPrev||0));
+    const nK=eNightUsageCol!==null&&eNightUsageCol>=0 ? eNightUsageCol : Math.max(0,(eNightCurr||0)-(eNightPrev||0));
+    const gU=gUsageCol!==null&&gUsageCol>=0 ? gUsageCol : Math.max(0,(gCurr||0)-(gPrev||0));
+    const wU=wUsageCol!==null&&wUsageCol>=0 ? wUsageCol : Math.max(0,(wCurr||0)-(wPrev||0));
     const gDel=t.g_delivery??0;
     const wDel=t.wc_delivery??0;
     const rent=t.rent??0;
@@ -864,6 +899,94 @@ function showImportResult(ok,msg){
   el.style.color=ok?'#3B6D11':'#993C1D';
   el.textContent=(ok?'✓ ':'✗ ')+msg;
 }
+
+/* ---- APPS SCRIPT SYNC ---- */
+function saveSheetsUrl(){
+  const url=document.getElementById('t_sheets_url').value.trim();
+  ST.sheetsUrl=url;
+  saveSt();
+  const card=document.getElementById('syncCard');
+  if(card)card.style.display=url?'block':'none';
+}
+
+function loadSheetsUrlUI(){
+  const inp=document.getElementById('t_sheets_url');
+  if(inp)inp.value=ST.sheetsUrl||'';
+  const card=document.getElementById('syncCard');
+  if(card)card.style.display=(ST.sheetsUrl)?'block':'none';
+}
+
+async function syncFromSheet(overwrite){
+  const url=ST.sheetsUrl||'';
+  if(!url){
+    showSyncResult(false,'Спочатку вкажіть URL Apps Script у вкладці «Тарифи» → Синхронізація.');
+    return;
+  }
+  const btn=document.getElementById('syncBtn');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Завантаження...';}
+  showSyncResult(null,'Завантаження даних...');
+  try{
+    const resp=await fetch(url+'?action=read');
+    if(!resp.ok)throw new Error('HTTP '+resp.status);
+    const data=await resp.json();
+    if(!data.ok)throw new Error(data.error||'Помилка скрипту');
+    const records=data.records||{};
+    const t=ST.tariffs;
+    let imported=0,skipped=0;
+    const sortedKeys=Object.keys(records).sort((a,b)=>{
+      const[ay,am]=a.split('-').map(Number);
+      const[by,bm]=b.split('-').map(Number);
+      return ay!==by?ay-by:am-bm;
+    });
+    for(const key of sortedKeys){
+      if(!overwrite&&ST.records[key]){skipped++;continue;}
+      const r=records[key];
+      const eDay=r.e_day_usage!==null?r.e_day_usage:(r.e_day_curr||0);
+      const eNight=r.e_night_usage!==null?r.e_night_usage:(r.e_night_curr||0);
+      const gUsage=r.g_usage!==null?r.g_usage:(r.g_curr||0);
+      const wcUsage=r.wc_usage!==null?r.wc_usage:(r.wc_curr||0);
+      const eTr=t.e_day??DTAR.e_day,eNr=t.e_night??DTAR.e_night;
+      const gR=t.g??DTAR.g,gDel=t.g_delivery??DTAR.g_delivery;
+      const wcR=t.wc??DTAR.wc,wDel=t.wc_delivery??DTAR.wc_delivery;
+      const rent=t.rent??DTAR.rent,garbage=t.garbage??DTAR.garbage;
+      const eT=Math.round((eDay*eTr+eNight*eNr)*100)/100;
+      const gT=Math.round(gUsage*gR*100)/100;
+      const wT=Math.round(wcUsage*wcR*100)/100;
+      const[year,month]=key.split('-').map(Number);
+      ST.records[key]={
+        year,month,
+        e_day_prev:0,e_day_curr:r.e_day_curr||0,e_day_kwh:eDay,e_total:eT,
+        e_night_prev:0,e_night_curr:r.e_night_curr||0,e_night_kwh:eNight,
+        g_prev:0,g_curr:r.g_curr||0,g_usage:gUsage,g_total:gT,g_delivery:gDel,g_grand:gT+gDel,
+        wc_prev:0,wc_curr:r.wc_curr||0,wc_usage:wcUsage,w_total:wT,wc_delivery:wDel,wc_grand:wT+wDel,
+        rent,garbage,
+        grand:eT+gT+gDel+wT+wDel+rent+garbage,
+        paid:false
+      };
+      imported++;
+    }
+    if(imported>0){saveSt();buildMonthSel();loadMonthData();}
+    let msg='';
+    if(imported>0)msg+=`Імпортовано місяців: ${imported}. `;
+    if(skipped>0)msg+=`Пропущено (вже є): ${skipped}. `;
+    if(imported===0&&skipped===0)msg='Дані отримано, але нових місяців не знайдено.';
+    showSyncResult(imported>0||skipped>0,msg);
+  }catch(err){
+    showSyncResult(false,'Помилка: '+err.message+'. Перевірте URL та доступ до скрипту (має бути "Всі").');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🔄 Синхронізувати (додати нові)';}
+  }
+}
+
+function showSyncResult(ok,msg){
+  const el=document.getElementById('syncResult');
+  if(!el)return;
+  el.style.display='block';
+  if(ok===null){el.style.background='#f5f5f5';el.style.color='#666';}
+  else{el.style.background=ok?'#EAF3DE':'#FAECE7';el.style.color=ok?'#3B6D11':'#993C1D';}
+  el.textContent=ok===null?msg:(ok?'✓ ':'✗ ')+msg;
+}
+
 function renderNotif(){
   const el=document.getElementById('notifContent');
   if(!('Notification' in window)){
