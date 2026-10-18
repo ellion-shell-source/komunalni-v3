@@ -689,36 +689,71 @@ const SHEET_MONTHS={
 
 function parseCSVImport(text){
   const rows=parseCSVRows(text);
-  // Find the header row with "Місяць"
+
+  // Google Sheets CSV може мати 1 або 2 рядки заголовків через об'єднані клітинки.
+  // Шукаємо рядок де є "Місяць" — це початок даних з лічильниками.
+  // Також об'єднані клітинки дають порожні значення в сусідніх колонках.
+  // Стратегія: знайти headerIdx, потім зібрати "повні" заголовки з двох рядків.
+
   let headerIdx=-1;
   for(let i=0;i<rows.length;i++){
-    if(rows[i][0]==='Місяць'){headerIdx=i;break;}
+    if(rows[i].some(c=>c&&c.trim()==='Місяць')){headerIdx=i;break;}
   }
   if(headerIdx===-1){
-    showCSVImportResult(false,'Не вдалося розпізнати формат таблиці. Переконайся, що перша колонка називається «Місяць».');
+    showCSVImportResult(false,'Не вдалося розпізнати формат таблиці. Переконайся, що перший стовпець називається «Місяць».');
     return;
   }
-  const headers=rows[headerIdx];
-  // Find column indices by header content
-  const col=(substr)=>{
-    const idx=headers.findIndex(h=>h&&h.includes(substr));
-    return idx;
+
+  // Збираємо заголовки: якщо є другий рядок заголовків — об'єднуємо
+  const h1=rows[headerIdx];
+  const h2=rows[headerIdx+1]||[];
+  // Перевіряємо чи h2 — це теж заголовок (не містить місяць у форматі "Листопад 2025")
+  const isH2Header=h2.length>0&&!SHEET_MONTHS[((h2[0]||'').split(' ')[0])];
+  // Будуємо масив повних заголовків
+  let lastGroup='';
+  const fullHeaders=h1.map((h,i)=>{
+    const top=(h||'').trim();
+    const bot=((h2[i])||'').trim();
+    if(top)lastGroup=top;
+    return (lastGroup+' '+bot).trim();
+  });
+
+  // Функція пошуку колонки за ключовими словами
+  const findCol=(keywords)=>{
+    for(let i=0;i<fullHeaders.length;i++){
+      const hh=fullHeaders[i].toLowerCase();
+      if(keywords.every(kw=>hh.includes(kw.toLowerCase())))return i;
+    }
+    return -1;
   };
-  // Column mapping based on the actual sheet structure:
-  // Місяць | Газ(показник) | Газ(спожито) | Елек.день(показник) | Елек.день(спожито) | Елек.ніч(показник) | Елек.ніч(спожито) | Елек.разом(пок) | Елек.разом(спожито) | Вода(показник) | Вода(спожито)
+
+  // Шукаємо колонки за змістом заголовка
   const iMonth=0;
-  const iGasCurr=1;   // показник газу (поточний)
-  const iEDayCurr=3;  // показник ел.день (поточний)
-  const iENightCurr=5;// показник ел.ніч (поточний)
-  const iWaterCurr=9; // показник води (поточний)
+  // Газ: показник (перший стовпець газу — не "спожито")
+  let iGasCurr=findCol(['газ','показник']);
+  // Електро день: показник
+  let iEDayCurr=findCol(['день','показник']);
+  if(iEDayCurr===-1)iEDayCurr=findCol(['ден','показник']);
+  // Електро ніч: показник
+  let iENightCurr=findCol(['ніч','показник']);
+  // Вода: показник
+  let iWaterCurr=findCol(['вода','показник']);
 
-  let imported=0,skipped=0,errors=0;
+  // Якщо пошук за заголовком не спрацював — падаємо на фіксовані індекси
+  // (структура XLSX яку ми читали: 0=Місяць,1=Газ показник,3=День показник,5=Ніч показник,9=Вода показник)
+  if(iGasCurr===-1)iGasCurr=1;
+  if(iEDayCurr===-1)iEDayCurr=3;
+  if(iENightCurr===-1)iENightCurr=5;
+  if(iWaterCurr===-1)iWaterCurr=9;
+
+  // Перший рядок даних — після заголовків
+  const dataStart=isH2Header?headerIdx+2:headerIdx+1;
+
+  let imported=0,skipped=0;
   const t=ST.tariffs;
-
-  // We need to build prev values from previous row
   let prevRow=null;
 
-  for(let i=headerIdx+1;i<rows.length;i++){
+  for(let i=dataStart;i<rows.length;i++){
     const row=rows[i];
     const monthCell=(row[iMonth]||'').trim();
     if(!monthCell)continue;
@@ -790,7 +825,11 @@ function parseCSVImport(text){
   let msg='';
   if(imported>0)msg+=`Імпортовано місяців: ${imported}. `;
   if(skipped>0)msg+=`Пропущено (вже є): ${skipped}. `;
-  if(imported===0&&skipped===0)msg='Не вдалося знайти дані. Переконайся, що завантажуєш правильний CSV файл.';
+  if(imported===0&&skipped===0)msg='Не вдалося знайти дані. Переконайся, що завантажуєш правильний CSV файл з Google Sheets (Файл → Завантажити → CSV).';
+  // Додаємо діагностику колонок якщо щось пішло не так
+  if(imported>0&&skipped===0){
+    msg+=` (колонки: газ=${iGasCurr}, день=${iEDayCurr}, ніч=${iENightCurr}, вода=${iWaterCurr})`;
+  }
   showCSVImportResult(imported>0,msg);
 }
 
