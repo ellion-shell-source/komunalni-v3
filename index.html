@@ -938,13 +938,25 @@ async function syncFromSheet(overwrite){
       const[by,bm]=b.split('-').map(Number);
       return ay!==by?ay-by:am-bm;
     });
+    // Допоміжна функція: попередній ключ місяця
+    const prevKey=key=>{
+      const[y,m]=key.split('-').map(Number);
+      return m===0?(y-1)+'-11':y+'-'+(m-1);
+    };
     for(const key of sortedKeys){
       if(!overwrite&&ST.records[key]){skipped++;continue;}
       const r=records[key];
-      const eDay=r.e_day_usage!==null?r.e_day_usage:(r.e_day_curr||0);
-      const eNight=r.e_night_usage!==null?r.e_night_usage:(r.e_night_curr||0);
-      const gUsage=r.g_usage!==null?r.g_usage:(r.g_curr||0);
-      const wcUsage=r.wc_usage!==null?r.wc_usage:(r.wc_curr||0);
+      // Беремо попередні показники з попереднього місяця (вже записаного або існуючого)
+      const prev=ST.records[prevKey(key)];
+      const eDayPrev=prev?prev.e_day_curr:0;
+      const eNightPrev=prev?prev.e_night_curr:0;
+      const gPrev=prev?prev.g_curr:0;
+      const wcPrev=prev?prev.wc_curr:0;
+      // Споживання: беремо з колонки спожито якщо є, інакше рахуємо різницю
+      const eDay=r.e_day_usage!==null?r.e_day_usage:Math.max(0,(r.e_day_curr||0)-eDayPrev);
+      const eNight=r.e_night_usage!==null?r.e_night_usage:Math.max(0,(r.e_night_curr||0)-eNightPrev);
+      const gUsage=r.g_usage!==null?r.g_usage:Math.max(0,(r.g_curr||0)-gPrev);
+      const wcUsage=r.wc_usage!==null?r.wc_usage:Math.max(0,(r.wc_curr||0)-wcPrev);
       const eTr=t.e_day??DTAR.e_day,eNr=t.e_night??DTAR.e_night;
       const gR=t.g??DTAR.g,gDel=t.g_delivery??DTAR.g_delivery;
       const wcR=t.wc??DTAR.wc,wDel=t.wc_delivery??DTAR.wc_delivery;
@@ -955,10 +967,10 @@ async function syncFromSheet(overwrite){
       const[year,month]=key.split('-').map(Number);
       ST.records[key]={
         year,month,
-        e_day_prev:0,e_day_curr:r.e_day_curr||0,e_day_kwh:eDay,e_total:eT,
-        e_night_prev:0,e_night_curr:r.e_night_curr||0,e_night_kwh:eNight,
-        g_prev:0,g_curr:r.g_curr||0,g_usage:gUsage,g_total:gT,g_delivery:gDel,g_grand:gT+gDel,
-        wc_prev:0,wc_curr:r.wc_curr||0,wc_usage:wcUsage,w_total:wT,wc_delivery:wDel,wc_grand:wT+wDel,
+        e_day_prev:eDayPrev,e_day_curr:r.e_day_curr||0,e_day_kwh:eDay,e_total:eT,
+        e_night_prev:eNightPrev,e_night_curr:r.e_night_curr||0,e_night_kwh:eNight,
+        g_prev:gPrev,g_curr:r.g_curr||0,g_usage:gUsage,g_total:gT,g_delivery:gDel,g_grand:gT+gDel,
+        wc_prev:wcPrev,wc_curr:r.wc_curr||0,wc_usage:wcUsage,w_total:wT,wc_delivery:wDel,wc_grand:wT+wDel,
         rent,garbage,
         grand:eT+gT+gDel+wT+wDel+rent+garbage,
         paid:false
